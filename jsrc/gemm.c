@@ -29,6 +29,25 @@
 #define MR  BLIS_DEFAULT_MR_D
 #define NR  BLIS_DEFAULT_NR_D
 
+#ifdef SYSTEM_BLAS
+#pragma message("SYSTEM_BLAS defined using cblas calls")
+enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102 };
+enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113, AtlasConj=114};
+// note: C may not alias B or A
+void cblas_dgemm(const enum CBLAS_ORDER Order,
+                 const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const double alpha, const double *A,
+                 const int lda, const double *B, const int ldb,
+                 const double beta, double *C, const int ldc);
+void cblas_zgemm(const enum CBLAS_ORDER Order,
+                 const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const dcomplex *alpha, const dcomplex *A, const int lda,
+                 const dcomplex *B, const int ldb, const dcomplex *beta, dcomplex *C,
+                 const int ldc);
+#endif
+
 
 //
 //  Packing complete panels from A (i.e. without padding)
@@ -265,6 +284,29 @@ dgemm_macro_kernel(dim_t   mc,
 //
 //  Compute C <- beta*C + alpha*A*B
 //
+#ifdef SYSTEM_BLAS
+#pragma message("dgemm_nn now calling cblas_dgemm")
+void
+dgemm_nn         (I              m,
+                  I              n,
+                  I              k,
+                  double         alpha,
+                  double         *A,
+                  I              rs_a,
+                  I              cs_a,
+                  double         *B,
+                  I              rs_b,
+                  I              cs_b,
+                  double         beta,
+                  double         *C,
+                  I              rs_c,
+                  I              cs_c)
+{
+ //note: we never get passed significant values for cs_x
+ cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, A, rs_a, B, rs_b, beta, C, rs_c);
+}
+#else
+#pragma message("gemm.c: using usual platform neutral dgemm_nn implementation")
 void
 dgemm_nn         (I              m,
                   I              n,
@@ -335,7 +377,7 @@ dgemm_nn         (I              m,
         }
     }
 }
-
+#endif //SYSTEM_BLAS
 
 // -----------------------------------------------------------------
 // INT matrix
@@ -778,6 +820,27 @@ zgemm_macro_kernel(dim_t   mc,
 //
 //  Compute C <- beta*C + alpha*A*B
 //
+#ifdef SYSTEM_BLAS
+void
+zgemm_nn         (I              m,
+                  I              n,
+                  I              k,
+                  dcomplex       alpha,
+                  dcomplex       *A,
+                  I              rs_a,
+                  I              cs_a,
+                  dcomplex       *B,
+                  I              rs_b,
+                  I              cs_b,
+                  dcomplex       beta,
+                  dcomplex       *C,
+                  I              rs_c,
+                  I              cs_c)
+{
+ //note: we never get passed significant values for cs_x
+ cblas_zgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, &alpha, A, rs_a, B, rs_b, &beta, C, rs_c);
+}
+#else
 void
 zgemm_nn         (I              m,
                   I              n,
@@ -848,4 +911,4 @@ zgemm_nn         (I              m,
         }
     }
 }
-
+#endif //SYSTEM_BLAS

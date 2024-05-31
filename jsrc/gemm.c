@@ -29,8 +29,20 @@
 #define MR  BLIS_DEFAULT_MR_D
 #define NR  BLIS_DEFAULT_NR_D
 
-#ifdef SYSTEM_BLAS
-#pragma message("SYSTEM_BLAS defined using cblas calls")
+#ifdef __ARM_ARCH_ISA_A64
+#pragma message("J64arm architecture defined now using Apple cblas calls")
+// to use Apple Accelerate BLAS code one would normally add the line:
+// #include <Accelerate/Accelerate.h>
+//
+// However due to macro definitions in j.h that use single letters to
+// represent C code, Accelerate.h becomes modified incorrectly and so you
+// have to pull the routines out of Accelerate.h and any support definitions
+// to use calls that will get linked at
+// or
+// you would have to rewrite most of the macros that have been used for years
+// in the J code.
+// since we only need 2 routines reproducing the call prototype here is the
+// prefered method.
 enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102 };
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113, AtlasConj=114};
 // note: C may not alias B or A
@@ -46,7 +58,7 @@ void cblas_zgemm(const enum CBLAS_ORDER Order,
                  const int K, const dcomplex *alpha, const dcomplex *A, const int lda,
                  const dcomplex *B, const int ldb, const dcomplex *beta, dcomplex *C,
                  const int ldc);
-#endif
+#endif //j64arm architecture checking
 
 
 //
@@ -284,7 +296,7 @@ dgemm_macro_kernel(dim_t   mc,
 //
 //  Compute C <- beta*C + alpha*A*B
 //
-#ifdef SYSTEM_BLAS
+#ifdef __ARM_ARCH_ISA_A64
 #pragma message("dgemm_nn now calling cblas_dgemm")
 void
 dgemm_nn         (I              m,
@@ -377,7 +389,7 @@ dgemm_nn         (I              m,
         }
     }
 }
-#endif //SYSTEM_BLAS
+#endif //j64arm architecture checking
 
 // -----------------------------------------------------------------
 // INT matrix
@@ -820,7 +832,7 @@ zgemm_macro_kernel(dim_t   mc,
 //
 //  Compute C <- beta*C + alpha*A*B
 //
-#ifdef SYSTEM_BLAS
+#ifdef __ARM_ARCH_ISA_A64
 void
 zgemm_nn         (I              m,
                   I              n,
@@ -911,4 +923,4 @@ zgemm_nn         (I              m,
         }
     }
 }
-#endif //SYSTEM_BLAS
+#endif //j64arm architecture checking
